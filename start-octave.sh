@@ -47,9 +47,10 @@ rm -f /usr/share/novnc/index.html
 # Auto-connect Parameter für NoVNC
 AUTOCONNECT_PARAM=""
 if [ "$AUTO_CONNECT" = true ]; then
-    AUTOCONNECT_PARAM="?autoconnect=true&resize=scale"
+    AUTOCONNECT_PARAM="?autoconnect=true&resize=scale&view_only=0"
 fi
 
+# Erstelle die optimierte vnc_auto.html
 cat > /usr/share/novnc/vnc_auto.html <<EOF
 <!DOCTYPE html>
 <html>
@@ -75,36 +76,48 @@ cat > /usr/share/novnc/vnc_auto.html <<EOF
                 margin: 0;
                 padding: 0;
             }
+            .loading {
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: white;
+                font-family: Arial, sans-serif;
+                text-align: center;
+            }
         </style>
     </head>
     <body>
         <div id="screen"></div>
+        <div class="loading">Connecting to Octave...</div>
         <script>
             window.onload = function() {
-                let rfb = new novnc.RFB(document.getElementById('screen'),
-                    'ws://' + window.location.host + '/websockify');
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = wsProtocol + '//' + window.location.host + '/websockify';
                 
-                // Optimierte Einstellungen für Vollbild
+                let rfb = new novnc.RFB(document.getElementById('screen'), wsUrl);
+                
+                // Optimierte Einstellungen
                 rfb.scaleViewport = true;
                 rfb.resizeSession = true;
                 rfb.viewOnly = false;
                 rfb.showDotCursor = false;
                 
-                // Auto-connect wenn Parameter gesetzt
-                if (window.location.search.includes('autoconnect=true')) {
-                    rfb.connect();
-                }
+                // Automatisch verbinden
+                rfb.connect();
                 
-                // Vollbild-Modus wenn gewünscht
-                if (window.location.search.includes('fullscreen=true')) {
-                    if (document.documentElement.requestFullscreen) {
-                        document.documentElement.requestFullscreen();
-                    }
-                }
+                // Event Handler
+                rfb.addEventListener('connect', () => {
+                    document.querySelector('.loading').style.display = 'none';
+                });
+                
+                rfb.addEventListener('disconnect', () => {
+                    document.querySelector('.loading').style.display = 'block';
+                });
                 
                 // Automatische Größenanpassung
                 function updateDisplay() {
-                    if (rfb) {
+                    if (rfb && rfb._display) {
                         rfb.scaleViewport = true;
                         rfb.resizeSession = true;
                     }
@@ -118,50 +131,20 @@ cat > /usr/share/novnc/vnc_auto.html <<EOF
 </html>
 EOF
 
-# Erstelle index.html - direkte Weiterleitung oder Standard
-if [ "$AUTO_CONNECT" = true ]; then
-    # Direkte Weiterleitung zu vnc_auto.html mit Auto-Connect
-    cat > /usr/share/novnc/index.html <<EOF
+# Erstelle index.html mit direkter Weiterleitung
+cat > /usr/share/novnc/index.html <<EOF
 <!DOCTYPE html>
 <html>
     <head>
         <meta http-equiv="refresh" content="0;url=vnc_auto.html${AUTOCONNECT_PARAM}">
         <title>Redirecting to Octave...</title>
     </head>
-    <body>
-        <p>Redirecting to GNU Octave...</p>
+    <body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">
+        <h2>Redirecting to GNU Octave...</h2>
+        <p>If you are not redirected automatically, <a href="vnc_auto.html${AUTOCONNECT_PARAM}">click here</a>.</p>
     </body>
 </html>
 EOF
-else
-    # Standard-Index mit manueller Navigation
-    cat > /usr/share/novnc/index.html <<EOF
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>GNU Octave Web Interface</title>
-        <style>
-            body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
-            .button { 
-                display: inline-block; 
-                padding: 15px 30px; 
-                background-color: #007acc; 
-                color: white; 
-                text-decoration: none; 
-                border-radius: 5px; 
-                margin: 10px;
-            }
-        </style>
-    </head>
-    <body>
-        <h1>GNU Octave Web Interface</h1>
-        <p>Click below to access Octave:</p>
-        <a href="vnc_auto.html" class="button">Open Octave</a>
-        <a href="vnc_auto.html?autoconnect=true&resize=scale" class="button">Auto-Connect to Octave</a>
-    </body>
-</html>
-EOF
-fi
 
 # Starte Websockify
 websockify --web=/usr/share/novnc/ ${PORT} localhost:5900 &
