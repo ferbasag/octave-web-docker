@@ -3,6 +3,26 @@ set -e
 
 echo "Starting VNC server setup..."
 
+# Parameter verarbeiten
+AUTO_CONNECT=false
+FULLSCREEN=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --auto-connect)
+            AUTO_CONNECT=true
+            shift
+            ;;
+        --fullscreen)
+            FULLSCREEN=true
+            shift
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
 # Nutze die Umgebungsvariablen oder Standardwerte
 RESOLUTION=${VNC_RESOLUTION:-1920x1080}
 PORT=${NO_VNC_PORT:-8080}
@@ -19,6 +39,12 @@ sleep 2
 rm -f /usr/share/novnc/vnc_auto.html
 rm -f /usr/share/novnc/index.html
 
+# Auto-connect Parameter für NoVNC
+AUTOCONNECT_PARAM=""
+if [ "$AUTO_CONNECT" = true ]; then
+    AUTOCONNECT_PARAM="?autoconnect=true&resize=scale"
+fi
+
 cat > /usr/share/novnc/vnc_auto.html <<EOF
 <!DOCTYPE html>
 <html>
@@ -32,6 +58,7 @@ cat > /usr/share/novnc/vnc_auto.html <<EOF
                 height: 100%; 
                 margin: 0; 
                 background-color: #2b2b2b;
+                overflow: hidden;
             }
             #screen {
                 position: fixed;
@@ -51,9 +78,24 @@ cat > /usr/share/novnc/vnc_auto.html <<EOF
             window.onload = function() {
                 let rfb = new novnc.RFB(document.getElementById('screen'),
                     'ws://' + window.location.host + '/websockify');
+                
+                // Optimierte Einstellungen für Vollbild
                 rfb.scaleViewport = true;
                 rfb.resizeSession = true;
                 rfb.viewOnly = false;
+                rfb.showDotCursor = false;
+                
+                // Auto-connect wenn Parameter gesetzt
+                if (window.location.search.includes('autoconnect=true')) {
+                    rfb.connect();
+                }
+                
+                // Vollbild-Modus wenn gewünscht
+                if (window.location.search.includes('fullscreen=true')) {
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen();
+                    }
+                }
                 
                 // Automatische Größenanpassung
                 function updateDisplay() {
@@ -76,7 +118,7 @@ cat > /usr/share/novnc/index.html <<EOF
 <!DOCTYPE html>
 <html>
     <head>
-        <meta http-equiv="refresh" content="0;url=vnc_auto.html">
+        <meta http-equiv="refresh" content="0;url=vnc_auto.html${AUTOCONNECT_PARAM}">
     </head>
 </html>
 EOF
@@ -90,4 +132,5 @@ cd ${WORKSPACE}
 octave --force-gui &
 
 echo "Setup complete. Access via browser at port ${PORT}"
+echo "Direct VNC access: vnc_auto.html${AUTOCONNECT_PARAM}"
 wait
