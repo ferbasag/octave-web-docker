@@ -23,6 +23,11 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Umgebungsvariablen prüfen
+if [ "${VNC_AUTO_REDIRECT}" = "true" ]; then
+    AUTO_CONNECT=true
+fi
+
 # Nutze die Umgebungsvariablen oder Standardwerte
 RESOLUTION=${VNC_RESOLUTION:-1920x1080}
 PORT=${NO_VNC_PORT:-8080}
@@ -113,15 +118,50 @@ cat > /usr/share/novnc/vnc_auto.html <<EOF
 </html>
 EOF
 
-# Erstelle index.html mit direkter Weiterleitung zur vnc_auto.html
-cat > /usr/share/novnc/index.html <<EOF
+# Erstelle index.html - direkte Weiterleitung oder Standard
+if [ "$AUTO_CONNECT" = true ]; then
+    # Direkte Weiterleitung zu vnc_auto.html mit Auto-Connect
+    cat > /usr/share/novnc/index.html <<EOF
 <!DOCTYPE html>
 <html>
     <head>
         <meta http-equiv="refresh" content="0;url=vnc_auto.html${AUTOCONNECT_PARAM}">
+        <title>Redirecting to Octave...</title>
     </head>
+    <body>
+        <p>Redirecting to GNU Octave...</p>
+    </body>
 </html>
 EOF
+else
+    # Standard-Index mit manueller Navigation
+    cat > /usr/share/novnc/index.html <<EOF
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>GNU Octave Web Interface</title>
+        <style>
+            body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+            .button { 
+                display: inline-block; 
+                padding: 15px 30px; 
+                background-color: #007acc; 
+                color: white; 
+                text-decoration: none; 
+                border-radius: 5px; 
+                margin: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>GNU Octave Web Interface</h1>
+        <p>Click below to access Octave:</p>
+        <a href="vnc_auto.html" class="button">Open Octave</a>
+        <a href="vnc_auto.html?autoconnect=true&resize=scale" class="button">Auto-Connect to Octave</a>
+    </body>
+</html>
+EOF
+fi
 
 # Starte Websockify
 websockify --web=/usr/share/novnc/ ${PORT} localhost:5900 &
