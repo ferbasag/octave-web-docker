@@ -17,30 +17,35 @@ sleep 3
 echo "Starting websockify (web bridge)..."
 cd /usr/share/novnc/
 
-# Erstelle Weiterleitungen basierend auf MWI_BASE_URL
-BASE_URL=${MWI_BASE_URL:-/gnu-octave}
-BASE_FILE=$(basename ${BASE_URL})
-
-# Erstelle die Hauptanwendung unter dem konfigurierten Namen
-cat > "${BASE_FILE}" <<EOF
+# Erstelle die Hauptanwendung
+cat > index.html <<EOF
 <!DOCTYPE html>
 <html>
     <head>
         <title>GNU Octave</title>
         <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="core/novnc.css">
         <script src="core/novnc.js"></script>
+        <style>
+            body, html {
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                overflow: hidden;
+            }
+            #screen {
+                width: 100vw;
+                height: 100vh;
+            }
+        </style>
     </head>
     <body>
         <div id="screen"></div>
         <script>
             window.onload = function() {
-                const urlParams = new URLSearchParams(window.location.search);
-                let host = window.location.hostname;
-                let port = window.location.port;
-                let path = 'websockify';
-                
-                let rfb = new novnc.RFB(document.getElementById('screen'), 
-                    'ws://' + host + ':' + port + '/' + path);
+                const rfb = new novnc.RFB(document.getElementById('screen'), 
+                    'ws://' + window.location.host + '/websockify');
                 rfb.scaleViewport = true;
                 rfb.resizeSession = true;
             };
@@ -49,24 +54,7 @@ cat > "${BASE_FILE}" <<EOF
 </html>
 EOF
 
-# Erstelle index.html mit Weiterleitung
-cat > index.html <<EOF
-<!DOCTYPE html>
-<html>
-<head>
-    <meta http-equiv="refresh" content="0;url=${BASE_URL}" />
-</head>
-</html>
-EOF
-
-# Erstelle Symlinks für alle bekannten Pfade zum konfigurierten File
-ln -sf "${BASE_FILE}" vnc.html
-ln -sf "${BASE_FILE}" vnc_auto.html
-ln -sf "${BASE_FILE}" vnc_auto.html@
-ln -sf "${BASE_FILE}" vnc_lite.html
-ln -sf "${BASE_FILE}" gnu-octave
-
-# Starte websockify
+# Starte websockify mit korrekter Konfiguration
 websockify --web=/usr/share/novnc/ 8080 localhost:5900 &
 sleep 5
 
