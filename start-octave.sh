@@ -15,7 +15,9 @@ x11vnc -display :1 -nopw -listen 0.0.0.0 -xkb -forever &
 sleep 3
 
 echo "Starting websockify (web bridge)..."
-websockify --web=/usr/share/novnc/ --web-index 'vnc_auto.html@' 8080 localhost:5900 &
+cd /usr/share/novnc/
+ln -sf vnc_auto.html@ index.html
+websockify --web=/usr/share/novnc/ 8080 localhost:5900 &
 sleep 5
 
 echo "Starting Octave GUI..."
