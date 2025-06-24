@@ -5,7 +5,8 @@ RUN apt-get update && apt-get install -y \
     xvfb x11vnc novnc websockify \
     && rm -rf /var/lib/apt/lists/*
 
-# Startup-Script kopieren
+# NoVNC-Konfiguration
+RUN mkdir -p /usr/share/novnc/
 COPY start-octave.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/start-octave.sh
 
@@ -17,10 +18,10 @@ ENV DISPLAY=:1 \
     CUDA_VISIBLE_DEVICES=all \
     NVIDIA_DRIVER_CAPABILITIES=compute,utility \
     QT_GRAPHICSSYSTEM=native \
-    XDG_RUNTIME_DIR=/tmp/runtime-octave \
-    MWI_BASE_URL=/vnc_auto.html
+    XDG_RUNTIME_DIR=/tmp/runtime-octave
 
 WORKDIR /workspace
 EXPOSE 8080
 
-CMD ["/usr/local/bin/start-octave.sh"]
+# Standardbefehl setzen
+ENTRYPOINT ["/usr/local/bin/start-octave.sh"]

@@ -15,22 +15,14 @@ x11vnc -display :1 -nopw -listen 0.0.0.0 -xkb -forever &
 sleep 3
 
 echo "Starting websockify (web bridge)..."
+
+# NoVNC-Dateien vorbereiten
+mkdir -p /usr/share/novnc
+cp -r /usr/share/novnc/core /usr/share/novnc/
 cd /usr/share/novnc/
 
-# Erstelle die Hauptanwendung
+# Hauptseite erstellen
 cat > index.html <<EOF
-<!DOCTYPE html>
-<html>
-    <head>
-        <title>GNU Octave</title>
-        <meta charset="utf-8">
-        <meta http-equiv="refresh" content="0;url=/vnc_auto.html">
-    </head>
-</html>
-EOF
-
-# Erstelle die VNC Viewer Seite
-cat > vnc_auto.html <<EOF
 <!DOCTYPE html>
 <html>
     <head>
@@ -65,10 +57,6 @@ cat > vnc_auto.html <<EOF
     </body>
 </html>
 EOF
-
-# Erstelle Symlinks für Kompatibilität
-ln -sf vnc_auto.html vnc.html
-ln -sf vnc_auto.html vnc_lite.html
 
 # Starte websockify mit korrekter Konfiguration
 websockify --web=/usr/share/novnc/ 8080 localhost:5900 &
