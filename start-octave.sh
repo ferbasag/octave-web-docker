@@ -15,7 +15,10 @@ sleep 2
 x11vnc -display :1 -nopw -listen 0.0.0.0 -xkb -forever -shared &
 sleep 2
 
-# Erstelle NoVNC Konfiguration
+# Lösche vorhandene Symlinks und erstelle unsere NoVNC Konfiguration
+rm -f /usr/share/novnc/vnc_auto.html
+rm -f /usr/share/novnc/index.html
+
 cat > /usr/share/novnc/vnc_auto.html <<EOF
 <!DOCTYPE html>
 <html>
@@ -65,6 +68,16 @@ cat > /usr/share/novnc/vnc_auto.html <<EOF
             };
         </script>
     </body>
+</html>
+EOF
+
+# Erstelle index.html mit direkter Weiterleitung zur vnc_auto.html
+cat > /usr/share/novnc/index.html <<EOF
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta http-equiv="refresh" content="0;url=vnc_auto.html">
+    </head>
 </html>
 EOF
 
