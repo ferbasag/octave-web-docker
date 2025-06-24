@@ -24,6 +24,18 @@ cat > index.html <<EOF
     <head>
         <title>GNU Octave</title>
         <meta charset="utf-8">
+        <meta http-equiv="refresh" content="0;url=/vnc_auto.html">
+    </head>
+</html>
+EOF
+
+# Erstelle die VNC Viewer Seite
+cat > vnc_auto.html <<EOF
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>GNU Octave</title>
+        <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="core/novnc.css">
         <script src="core/novnc.js"></script>
@@ -53,6 +65,10 @@ cat > index.html <<EOF
     </body>
 </html>
 EOF
+
+# Erstelle Symlinks für Kompatibilität
+ln -sf vnc_auto.html vnc.html
+ln -sf vnc_auto.html vnc_lite.html
 
 # Starte websockify mit korrekter Konfiguration
 websockify --web=/usr/share/novnc/ 8080 localhost:5900 &
