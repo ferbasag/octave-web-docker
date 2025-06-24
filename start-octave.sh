@@ -1,45 +1,44 @@
 #!/bin/bash
 set -e
 
-# Display setzen
-export DISPLAY=:1
+echo "Starting VNC server setup..."
 
-# Virtuelle Display mit höherer Auflösung starten
-Xvfb :1 -screen 0 1920x1080x24 &
+# Nutze die Umgebungsvariablen oder Standardwerte
+RESOLUTION=${VNC_RESOLUTION:-1920x1080}
+PORT=${NO_VNC_PORT:-8080}
+
+# Starte Xvfb
+Xvfb :1 -screen 0 ${RESOLUTION}x24 &
 sleep 2
 
-# VNC Server mit optimierten Einstellungen starten
-x11vnc -display :1 -nopw -listen 0.0.0.0 -xkb -forever -scale_cursor 1 -repeat -shared &
+# Starte VNC Server
+x11vnc -display :1 -nopw -listen 0.0.0.0 -xkb -forever -shared &
 sleep 2
 
-# NoVNC konfigurieren
-cd /usr/share/novnc/
-cat > vnc_auto.html <<EOF
+# Erstelle NoVNC Konfiguration
+cat > /usr/share/novnc/vnc_auto.html <<EOF
 <!DOCTYPE html>
 <html>
     <head>
-        <title>GNU Octave</title>
+        <title>GNU Octave Web Interface</title>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-        <link rel="stylesheet" href="core/novnc.css">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <script src="core/novnc.js"></script>
         <style>
-            body, html {
-                width: 100%;
-                height: 100%;
-                margin: 0;
-                padding: 0;
-                overflow: hidden;
-                background-color: #1a1a1a;
+            html, body { 
+                height: 100%; 
+                margin: 0; 
+                background-color: #2b2b2b;
             }
             #screen {
-                position: absolute;
-                left: 0;
+                position: fixed;
                 top: 0;
-                right: 0;
-                bottom: 0;
-                width: 100%;
-                height: 100%;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
             }
         </style>
     </head>
@@ -47,34 +46,35 @@ cat > vnc_auto.html <<EOF
         <div id="screen"></div>
         <script>
             window.onload = function() {
-                const rfb = new novnc.RFB(document.getElementById('screen'), 
+                let rfb = new novnc.RFB(document.getElementById('screen'),
                     'ws://' + window.location.host + '/websockify');
-                
-                // Vollbild und Skalierung aktivieren
                 rfb.scaleViewport = true;
                 rfb.resizeSession = true;
                 rfb.viewOnly = false;
                 
-                // Automatische Anpassung an Fenstergröße
-                window.addEventListener('resize', function() {
-                    if (rfb) rfb.scaleViewport = true;
-                });
+                // Automatische Größenanpassung
+                function updateDisplay() {
+                    if (rfb) {
+                        rfb.scaleViewport = true;
+                        rfb.resizeSession = true;
+                    }
+                }
+                
+                window.onresize = updateDisplay;
+                updateDisplay();
             };
         </script>
     </body>
 </html>
 EOF
 
-# Symlink für automatischen Start
-ln -sf vnc_auto.html index.html
-
-# Websockify mit optimierten Einstellungen starten
-websockify --web=/usr/share/novnc/ --heartbeat=30 8080 localhost:5900 &
+# Starte Websockify
+websockify --web=/usr/share/novnc/ ${PORT} localhost:5900 &
 sleep 2
 
-# Octave mit maximiertem Fenster starten
-cd /workspace
-octave --gui --force-gui &
+echo "Starting Octave..."
+cd ${WORKSPACE}
+octave --force-gui &
 
-# Warten auf alle Prozesse
+echo "Setup complete. Access via browser at port ${PORT}"
 wait
