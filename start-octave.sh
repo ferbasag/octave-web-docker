@@ -16,7 +16,18 @@ sleep 3
 
 echo "Starting websockify (web bridge)..."
 cd /usr/share/novnc/
-# Erstelle eine angepasste gnu-octave Datei mit automatischer Verbindung
+
+# Erstelle Weiterleitungen für alle möglichen Pfade
+cat > index.html <<EOF
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="refresh" content="0;url=/gnu-octave" />
+</head>
+</html>
+EOF
+
+# Erstelle die Hauptanwendung
 cat > gnu-octave <<EOF
 <!DOCTYPE html>
 <html>
@@ -44,7 +55,13 @@ cat > gnu-octave <<EOF
 </html>
 EOF
 
-ln -sf gnu-octave index.html
+# Erstelle Symlinks für alle bekannten Pfade
+ln -sf gnu-octave vnc.html
+ln -sf gnu-octave vnc_auto.html
+ln -sf gnu-octave vnc_auto.html@
+ln -sf gnu-octave vnc_lite.html
+
+# Starte websockify
 websockify --web=/usr/share/novnc/ 8080 localhost:5900 &
 sleep 5
 
