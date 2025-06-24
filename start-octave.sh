@@ -1,70 +1,47 @@
 #!/bin/bash
 set -e
 
-echo "=== Starting Octave Web Interface ==="
-
-# Environment setzen
+# Display setzen
 export DISPLAY=:1
 
-echo "Starting Xvfb (virtual display)..."
+# Virtuelle Display starten
 Xvfb :1 -screen 0 1024x768x24 &
-sleep 3
+sleep 2
 
-echo "Starting x11vnc (VNC server)..."
+# VNC Server starten
 x11vnc -display :1 -nopw -listen 0.0.0.0 -xkb -forever &
-sleep 3
+sleep 2
 
-echo "Starting websockify (web bridge)..."
-
-# NoVNC-Dateien vorbereiten
-mkdir -p /usr/share/novnc
-cp -r /usr/share/novnc/core /usr/share/novnc/
+# NoVNC konfigurieren
 cd /usr/share/novnc/
-
-# Hauptseite erstellen
-cat > index.html <<EOF
+cat > vnc_auto.html <<EOF
 <!DOCTYPE html>
 <html>
     <head>
         <title>GNU Octave</title>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="core/novnc.css">
         <script src="core/novnc.js"></script>
-        <style>
-            body, html {
-                margin: 0;
-                padding: 0;
-                height: 100%;
-                overflow: hidden;
-            }
-            #screen {
-                width: 100vw;
-                height: 100vh;
-            }
-        </style>
     </head>
-    <body>
-        <div id="screen"></div>
+    <body style="margin:0;padding:0;height:100vh">
+        <div id="screen" style="width:100%;height:100%"></div>
         <script>
-            window.onload = function() {
-                const rfb = new novnc.RFB(document.getElementById('screen'), 
-                    'ws://' + window.location.host + '/websockify');
-                rfb.scaleViewport = true;
-                rfb.resizeSession = true;
-            };
+            new novnc.RFB(document.getElementById('screen'), 
+                'ws://' + window.location.host + '/websockify');
         </script>
     </body>
 </html>
 EOF
 
-# Starte websockify mit korrekter Konfiguration
-websockify --web=/usr/share/novnc/ 8080 localhost:5900 &
-sleep 5
+# Symlink für automatischen Start
+ln -sf vnc_auto.html index.html
 
-echo "Starting Octave GUI..."
+# Websockify starten
+websockify --web=/usr/share/novnc/ 8080 localhost:5900 &
+sleep 2
+
+# Octave starten
 cd /workspace
 octave --gui &
 
-echo "=== All services started! Access via browser on port 8080 ==="
+# Warten auf alle Prozesse
 wait
