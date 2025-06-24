@@ -16,6 +16,34 @@ sleep 3
 
 echo "Starting websockify (web bridge)..."
 cd /usr/share/novnc/
+# Erstelle eine angepasste vnc_auto.html@ mit automatischer Verbindung
+cat > vnc_auto.html@ <<EOF
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>noVNC</title>
+        <meta charset="utf-8">
+        <script src="core/novnc.js"></script>
+    </head>
+    <body>
+        <div id="screen"></div>
+        <script>
+            window.onload = function() {
+                const urlParams = new URLSearchParams(window.location.search);
+                let host = window.location.hostname;
+                let port = window.location.port;
+                let path = 'websockify';
+                
+                let rfb = new novnc.RFB(document.getElementById('screen'), 
+                    'ws://' + host + ':' + port + '/' + path);
+                rfb.scaleViewport = true;
+                rfb.resizeSession = true;
+            };
+        </script>
+    </body>
+</html>
+EOF
+
 ln -sf vnc_auto.html@ index.html
 websockify --web=/usr/share/novnc/ 8080 localhost:5900 &
 sleep 5
