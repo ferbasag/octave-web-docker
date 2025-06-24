@@ -17,7 +17,8 @@ ENV DISPLAY=:1 \
     CUDA_VISIBLE_DEVICES=all \
     NVIDIA_DRIVER_CAPABILITIES=compute,utility \
     QT_GRAPHICSSYSTEM=native \
-    XDG_RUNTIME_DIR=/tmp/runtime-octave
+    XDG_RUNTIME_DIR=/tmp/runtime-octave \
+    MWI_BASE_URL=/vnc_auto.html
 
 WORKDIR /workspace
 EXPOSE 8080

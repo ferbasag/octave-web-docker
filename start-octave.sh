@@ -17,18 +17,12 @@ sleep 3
 echo "Starting websockify (web bridge)..."
 cd /usr/share/novnc/
 
-# Erstelle Weiterleitungen für alle möglichen Pfade
-cat > index.html <<EOF
-<!DOCTYPE html>
-<html>
-<head>
-    <meta http-equiv="refresh" content="0;url=/gnu-octave" />
-</head>
-</html>
-EOF
+# Erstelle Weiterleitungen basierend auf MWI_BASE_URL
+BASE_URL=${MWI_BASE_URL:-/gnu-octave}
+BASE_FILE=$(basename ${BASE_URL})
 
-# Erstelle die Hauptanwendung
-cat > gnu-octave <<EOF
+# Erstelle die Hauptanwendung unter dem konfigurierten Namen
+cat > "${BASE_FILE}" <<EOF
 <!DOCTYPE html>
 <html>
     <head>
@@ -55,11 +49,22 @@ cat > gnu-octave <<EOF
 </html>
 EOF
 
-# Erstelle Symlinks für alle bekannten Pfade
-ln -sf gnu-octave vnc.html
-ln -sf gnu-octave vnc_auto.html
-ln -sf gnu-octave vnc_auto.html@
-ln -sf gnu-octave vnc_lite.html
+# Erstelle index.html mit Weiterleitung
+cat > index.html <<EOF
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="refresh" content="0;url=${BASE_URL}" />
+</head>
+</html>
+EOF
+
+# Erstelle Symlinks für alle bekannten Pfade zum konfigurierten File
+ln -sf "${BASE_FILE}" vnc.html
+ln -sf "${BASE_FILE}" vnc_auto.html
+ln -sf "${BASE_FILE}" vnc_auto.html@
+ln -sf "${BASE_FILE}" vnc_lite.html
+ln -sf "${BASE_FILE}" gnu-octave
 
 # Starte websockify
 websockify --web=/usr/share/novnc/ 8080 localhost:5900 &
