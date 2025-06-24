@@ -1,11 +1,13 @@
-name: Build Docker Image
+name: Build and Test Docker Image
 
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -14,16 +16,53 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build Docker image for testing
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        load: true
+        tags: octave-web-test:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+    
+    - name: Test container startup
+      run: |
+        docker run -d -p 8080:8080 --name octave-test octave-web-test:latest
+        # Warte auf Container-Start
+        sleep 30
+        
+        # Prüfe ob die Services laufen
+        docker exec octave-test pgrep -f "x11vnc" || exit 1
+        docker exec octave-test pgrep -f "websockify" || exit 1
+        docker exec octave-test pgrep -f "Xvfb" || exit 1
+        docker exec octave-test pgrep -f "octave" || exit 1
+        
+        # Teste NoVNC Endpoint
+        curl -f http://localhost:8080/vnc_auto.html || exit 1
+        
+        # Cleanup
+        docker stop octave-test
+        docker rm octave-test
+    
     - name: Log in to GitHub Container Registry
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: docker/login-action@v3
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     
-    - name: Build and push Docker image
+    - name: Build and push production Docker image
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: docker/build-push-action@v5
       with:
         context: .
         push: true
-        tags: ghcr.io/${{ github.repository }}:latest
+        tags: |
+          ghcr.io/${{ github.repository }}:latest
+          ghcr.io/${{ github.repository }}:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
